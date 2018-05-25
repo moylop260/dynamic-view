@@ -74,9 +74,11 @@ class DynamicView(models.TransientModel):
                                              # TODO: Date fields.values() but currently we have datetime :(
                                              ])
         print "*"*10,len(attendances), len(employees)
-        attendances_dict = dict(
-            (attendance.employee_id.id, {attendance.name[:-9]: attendance.action})
-            for attendance in attendances)
+        attendances_dict = {}
+        for attendance in attendances:
+            attendances_dict.setdefault(attendance.employee_id.id, {}).update({
+                attendance.name[:-9]: attendance.action,
+            })
         for employee in employees:
             data = data_initial.copy()
             data.update(dict(
