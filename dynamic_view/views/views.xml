@@ -5,7 +5,6 @@
       <field name="arch" type="xml">
         <tree editable="bottom">
           <field name="employee_id"/>
-          <field name="dummy"/>
         </tree>
       </field>
     </record>
