@@ -49,11 +49,13 @@ class DynamicView(models.Model):
                 date_name = date_work.strftime('%b %d')
                 t_date_name = date_work.strftime(DEFAULT_SERVER_DATE_FORMAT)
                 self._add_field(t_date_name, self.get_field_states(date_name))
+                self._proper_fields |= set(t_date_name)
                 date_node = etree.fromstring(
                     self.field_view_definition % t_date_name)
                 parent_node.insert(parent_node.index(node) + 1, date_node)
                 date_work += timedelta(days=1)
                 node_work = date_node
+            self._setup_fields(partial=True)
             result['arch'], result['fields'] = (
                 self.env['ir.ui.view'].postprocess_and_fields(
                     self._name, doc, None))
@@ -74,22 +76,25 @@ class DynamicView(models.Model):
         attendances = attendance_brw.search([('employee_id', 'in', employees.ids),
                                              # TODO: Date fields.values() but currently we have datetime :(
                                              ])
-        print "*"*10,len(attendances), len(employees)
+        # print "*"*10,len(attendances), len(employees)
         attendances_dict = {}
         for attendance in attendances:
+            date_name = attendance.name[:10]
+            if date_name not in self._columns:
+                continue
             attendances_dict.setdefault(attendance.employee_id.id, {}).update({
-                attendance.name[:10]: attendance.action,
+                date_name: attendance.action,
             })
-        # import pdb;pdb.set_trace()
+        dynamic_view = self.env['dynamic.view']
         for employee in employees:
             data = data_initial.copy()
             data.update(dict(
-                id=employee.id,
                 employee_id=employee.id,
                 **(attendances_dict.get(employee.id) or {})
             ))
+            self.browse(employee.id)._update_cache(data)
+            data.update(dict(id=employee.id))
             res.append(data)
-        print res
         return res
 
     @api.multi
@@ -100,7 +105,7 @@ class DynamicView(models.Model):
         domain = [('employee_id', '=', employee_id),
                   # ('name', 'in', vals.keys())])  # TODO: Enable this line for the model where is used date. (and not datetime)
                  ]
-        attendances_dict = dict((attendance.name[:10], attendance) for attendance in attendance_brw.search(domain))
+        attendances_dict = dict((attendance.name[:10], attendance) for attendance in attendance_brw.search(domain) if attendance.name[0].isdigit())
         for attendance_date in vals:
             attendance = attendances_dict.get(attendance_date)
             data = dict(
@@ -112,8 +117,13 @@ class DynamicView(models.Model):
                 attendance = attendance_brw.create(data)
             else:
                 attendance.write(data)
+            self._update_cache(vals)
             # self.env['dynamic.view'].new(data)
-        vals.update({'employee_id': self.id})
+        # vals.update({'employee_id': self.id})
+        return True
+
+    @api.multi
+    def _update_cache(self, vals):
         for record in self:
             record._cache.update(record._convert_to_cache(vals, update=True))
         # mark the fields as being computed, to avoid their invalidation
@@ -125,4 +135,4 @@ class DynamicView(models.Model):
         #     self._fields[key].determine_inverse(self)  # get error
         for key in vals:
             self.env.computed[self._fields[key]].difference_update(self._ids)
-        return True
+
