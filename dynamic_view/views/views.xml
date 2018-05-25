@@ -1,0 +1,31 @@
+<openerp>
+    <record model="ir.ui.view" id="dynamic_view_view_list">
+      <field name="name">'dynamic.view.view.list'</field>
+      <field name="model">dynamic.view</field>
+      <field name="arch" type="xml">
+        <tree>
+          <field name="dummy"/>
+        </tree>
+      </field>
+    </record>
+    <record model="ir.ui.view" id="dynamic_view_view_form">
+      <field name="name">'dynamic.view.view.form'</field>
+      <field name="model">dynamic.view</field>
+      <field name="arch" type="xml">
+        <form>
+          <field name="dummy"/>
+        </form>
+      </field>
+    </record>
+    <record model="ir.actions.act_window" id="dynamic_view_action_window">
+      <field name="name">dynamic.view.action.window</field>
+      <field name="res_model">dynamic.view</field>
+      <field name="view_mode">tree,form</field>
+    </record>
+
+
+    <menuitem name="dynamic_view" id="menu_root"/>
+    <menuitem name="Menu 1" id="menu_1" parent="menu_root"/>
+    <menuitem name="Dynamic View" id="dynamic_view_menu" parent="menu_1"
+              action="dynamic_view_action_window"/>
+</openerp>
