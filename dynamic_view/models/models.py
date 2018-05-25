@@ -72,16 +72,15 @@ class DynamicView(models.Model):
             [], limit=limit, offset=offset)
         res = []
         data_initial = dict((field, self.default_state)
-                            for field in fields if field[0].isdigit())  # Just dates fields
-        attendances = attendance_brw.search([('employee_id', 'in', employees.ids),
-                                             # TODO: Date fields.values() but currently we have datetime :(
-                                             ])
+                             for field in fields if field[0].isdigit())  # Just dates fields
+        attendances = attendance_brw.search([
+            ('employee_id', 'in', employees.ids),
+            ('name', 'in', data_initial.keys()),
+        ])
         # print "*"*10,len(attendances), len(employees)
         attendances_dict = {}
         for attendance in attendances:
             date_name = attendance.name[:10]
-            if date_name not in self._columns:
-                continue
             attendances_dict.setdefault(attendance.employee_id.id, {}).update({
                 date_name: attendance.action,
             })
