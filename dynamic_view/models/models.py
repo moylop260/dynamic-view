@@ -31,7 +31,7 @@ class DynamicView(models.TransientModel):
 
     def get_field_states(self, label):
         states = self.env['hr.attendance']._fields['action'].selection
-        return fields.Selection(states, string=label)
+        return fields.Selection(states, string=label, automatic=True)
 
     @api.model
     def fields_view_get(self, view_id=None, view_type='form', toolbar=False,
@@ -56,7 +56,7 @@ class DynamicView(models.TransientModel):
             result['arch'], result['fields'] = (
                 self.env['ir.ui.view'].postprocess_and_fields(
                     self._name, doc, None))
-            self = self.create({'employee_id': 1})
+            # self = self.create({'employee_id': 1})
         return result
 
     @api.model
