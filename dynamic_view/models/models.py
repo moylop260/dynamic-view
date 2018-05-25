@@ -20,9 +20,9 @@ from openerp.tools import DEFAULT_SERVER_DATE_FORMAT
 #     def _value_pc(self):
 #         self.value2 = float(self.value) / 100
 
-class DynamicView(models.TransientModel):
+class DynamicView(models.Model):
     _name = 'dynamic.view'
-    # _auto = False
+    _auto = False
 
     employee_id = fields.Many2one('hr.employee', store=False, readonly=True)
 
@@ -31,7 +31,7 @@ class DynamicView(models.TransientModel):
 
     def get_field_states(self, label):
         states = self.env['hr.attendance']._fields['action'].selection
-        return fields.Selection(states, string=label)
+        return fields.Selection(states, string=label, automatic=True)
 
     @api.model
     def fields_view_get(self, view_id=None, view_type='form', toolbar=False,
@@ -47,16 +47,20 @@ class DynamicView(models.TransientModel):
             for i in range(10):
                 date_name = date_work.strftime('%b %d')
                 t_date_name = date_work.strftime(DEFAULT_SERVER_DATE_FORMAT)
-                self._add_field(t_date_name, self.get_field_states(date_name))
+                t_field = self.get_field_states(date_name)
+                self._add_field(t_date_name, t_field)
+                self._proper_fields |= set(t_date_name)
                 date_node = etree.fromstring(
                     self.field_view_definition % t_date_name)
                 parent_node.insert(parent_node.index(node) + 1, date_node)
                 date_work += timedelta(days=1)
                 node_work = date_node
+            self._setup_fields(partial=False)
+            # self.pool.model_cache[self.__bases__] = self
             result['arch'], result['fields'] = (
                 self.env['ir.ui.view'].postprocess_and_fields(
                     self._name, doc, None))
-            self = self.create({'employee_id': 1})
+            # self = self.create({'employee_id': 1})
         return result
 
     @api.model
@@ -73,26 +77,53 @@ class DynamicView(models.TransientModel):
         attendances = attendance_brw.search([('employee_id', 'in', employees.ids),
                                              # TODO: Date fields.values() but currently we have datetime :(
                                              ])
-        print "*"*10,len(attendances), len(employees)
-        attendances_dict = dict(
-            (attendance.employee_id.id, {attendance.name[:-9]: attendance.action})
-            for attendance in attendances)
+        # print "*"*10,len(attendances), len(employees)
+        attendances_dict = {}
+        for attendance in attendances:
+            attendances_dict.setdefault(attendance.employee_id.id, {}).update({
+                attendance.name[:-9]: attendance.action,
+            })
+        # attendances_dict = dict(
+        #     (attendance.employee_id.id, {attendance.name[:-9]: attendance.action})
+            # for attendance in attendances)
         for employee in employees:
-            data = data_initial.copy()
+            # data = data_initial.copy()
+            data = {}
+            extra_data = attendances_dict.get(employee.id) or {}
+            print "extra data" + "*"*10,employee.id, extra_data
             data.update(dict(
-                id=employee.id,
+                # id=employee.id,
                 employee_id=employee.id,
-                **(attendances_dict.get(employee.id) or {})
+                **extra_data
             ))
+            # print "1"*10, data.keys()
+            # self.browse(employee.id)._cache.update(data)
+            data.update({'id': employee.id})
             res.append(data)
         print res
         return res
 
     @api.multi
+    def _cache_update(self, vals):
+        for record in self:
+            record._cache.update(record._convert_to_cache(vals, update=True))
+        # mark the fields as being computed, to avoid their invalidation
+        for key in vals:
+            self.env.computed[self._fields[key]].update(self._ids)
+        # inverse the fields
+        # for key in vals:
+        #     self._fields[key].determine_inverse(self)  # get error
+        for key in vals:
+            self.env.computed[self._fields[key]].difference_update(self._ids)
+
+
+    @api.multi
     def write(self, vals):
         self.ensure_one()
         attendance_brw = self.env['hr.attendance']
-        employee_id = self.id
+        employee_id = self.employee_id or vals.get('employee_id')
+        if not employee_id:
+            return True
         domain = [('employee_id', '=', employee_id),
                   # ('name', 'in', vals.keys())])  # TODO: Enable this line for the model where is used date. (and not datetime)
                  ]
@@ -108,14 +139,5 @@ class DynamicView(models.TransientModel):
                 attendance_brw.create(data)
             else:
                 attendance.write(data)
-        for record in self:
-            record._cache.update(record._convert_to_cache(vals, update=True))
-        # mark the fields as being computed, to avoid their invalidation
-        for key in vals:
-            self.env.computed[self._fields[key]].update(self._ids)
-        # inverse the fields
-        # for key in vals:
-        #     self._fields[key].determine_inverse(self)  # get error
-        for key in vals:
-            self.env.computed[self._fields[key]].difference_update(self._ids)
+        self._cache_update(vals)
         return True
