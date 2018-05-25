@@ -3,24 +3,27 @@
       <field name="name">'dynamic.view.view.list'</field>
       <field name="model">dynamic.view</field>
       <field name="arch" type="xml">
-        <tree>
+        <tree editable="bottom">
+          <field name="employee_id"/>
           <field name="dummy"/>
         </tree>
       </field>
     </record>
-    <record model="ir.ui.view" id="dynamic_view_view_form">
-      <field name="name">'dynamic.view.view.form'</field>
-      <field name="model">dynamic.view</field>
-      <field name="arch" type="xml">
-        <form>
-          <field name="dummy"/>
-        </form>
-      </field>
-    </record>
+    <!-- <record model="ir.ui.view" id="dynamic_view_view_form"> -->
+    <!--   <field name="name">'dynamic.view.view.form'</field> -->
+    <!--   <field name="model">dynamic.view</field> -->
+    <!--   <field name="arch" type="xml"> -->
+    <!--     <form> -->
+    <!--       <field name="employee_id"/> -->
+    <!--       <field name="dummy"/> -->
+    <!--     </form> -->
+    <!--   </field> -->
+    <!-- </record> -->
     <record model="ir.actions.act_window" id="dynamic_view_action_window">
       <field name="name">dynamic.view.action.window</field>
       <field name="res_model">dynamic.view</field>
-      <field name="view_mode">tree,form</field>
+      <!-- <field name="view_mode">tree,form</field> -->
+      <field name="view_mode">tree</field>
     </record>
 
 
