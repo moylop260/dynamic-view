@@ -19,10 +19,11 @@ from openerp.tools import DEFAULT_SERVER_DATE_FORMAT
 #     @api.depends('value')
 #     def _value_pc(self):
 #         self.value2 = float(self.value) / 100
+# class HRAttendance(models.Models):
 
-class DynamicView(models.TransientModel):
+class DynamicView(models.Model):
     _name = 'dynamic.view'
-    # _auto = False
+    _auto = False
 
     employee_id = fields.Many2one('hr.employee', store=False, readonly=True)
 
@@ -77,8 +78,9 @@ class DynamicView(models.TransientModel):
         attendances_dict = {}
         for attendance in attendances:
             attendances_dict.setdefault(attendance.employee_id.id, {}).update({
-                attendance.name[:-9]: attendance.action,
+                attendance.name[:10]: attendance.action,
             })
+        # import pdb;pdb.set_trace()
         for employee in employees:
             data = data_initial.copy()
             data.update(dict(
@@ -98,7 +100,7 @@ class DynamicView(models.TransientModel):
         domain = [('employee_id', '=', employee_id),
                   # ('name', 'in', vals.keys())])  # TODO: Enable this line for the model where is used date. (and not datetime)
                  ]
-        attendances_dict = dict((attendance.name[:-9], attendance) for attendance in attendance_brw.search(domain))
+        attendances_dict = dict((attendance.name[:10], attendance) for attendance in attendance_brw.search(domain))
         for attendance_date in vals:
             attendance = attendances_dict.get(attendance_date)
             data = dict(
@@ -107,13 +109,16 @@ class DynamicView(models.TransientModel):
                 name=attendance_date + ' 00:00:00'
             )
             if not attendance:
-                attendance_brw.create(data)
+                attendance = attendance_brw.create(data)
             else:
                 attendance.write(data)
+            # self.env['dynamic.view'].new(data)
+        vals.update({'employee_id': self.id})
         for record in self:
             record._cache.update(record._convert_to_cache(vals, update=True))
         # mark the fields as being computed, to avoid their invalidation
         for key in vals:
+            # self.env.cache.set
             self.env.computed[self._fields[key]].update(self._ids)
         # inverse the fields
         # for key in vals:
