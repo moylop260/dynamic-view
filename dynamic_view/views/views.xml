@@ -3,7 +3,7 @@
       <field name="name">'dynamic.view.view.list'</field>
       <field name="model">dynamic.view</field>
       <field name="arch" type="xml">
-        <tree editable="bottom">
+        <tree editable="top" create="false" import="false">
           <field name="employee_id"/>
         </tree>
       </field>
